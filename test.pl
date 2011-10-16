@@ -6,52 +6,51 @@ use Combinator;
 
 use AE;
 
-print "1\n"; # 2
-
-my $done = AE::cv;
-
+my $ser_done = AE::cv;
 ser{{
-    my $t; $t = AE::timer .5, 0, {{next}};
+    my $a = 'a';
+    my $t; $t = AE::timer .5, 0, {{next_sub}};
 ser--
     undef $t;
-    print "First\n";
-    {{next}}->();
+    my $b = 'b';
+    print "First $a\n";
+    {{next}};
 ser--
-    print "Second (no delay)\n";
-    my $t; $t = AE::timer .5, 0, {{next}};
+    print "Second (no delay) $a $b\n";
+    my $c = 'c';
+    my $t; $t = AE::timer .5, 0, {{next_sub}};
 ser--
     undef $t;
-    print "Done\n";
-    $done->send;
+    print "Done $a $b $c\n";
+    $ser_done->send;
 ser}}
-
-$done->recv;
+$ser_done->recv;
 
 =comment
 
-{
-    my $t; $t = AE::timer 2, 0, sub {
-        undef $t;
-        print "First\n";
-        my $t; $t = AE::timer 2, 0, sub {
-            undef $t;
-            print "Done\n";
-            $done->send;
-        };
-    };
-}
+my $ser_done = AE::cv;
+Combinator::once sub { local $Combinator::holder = do { \ my $foo };
+    my $a = 'a';
+    my $t; $t = AE::timer .5, 0, Combinator::lazy_sub($Combinator::holder);
 
-{
-    my $t; $t = AE::timer 2, 0, $next;
-    $next = sub {
+    $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
         undef $t;
-        print "First\n";
-        my $t; $t = AE::timer 2, 0, sub {
-            undef $t;
-            print "Done\n";
-            $done->send;
+        my $b = 'b';
+        print "First $a\n";
+        Combinator::lazy_once($Combinator::holder);
+
+        $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
+            print "Second (no delay) $a $b\n";
+            my $c = 'c';
+            my $t; $t = AE::timer .5, 0, Combinator::lazy_sub($Combinator::holder);
+            $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
+                undef $t;
+                print "Done $a $b $c\n";
+                $ser_done->send;
+            };
         };
     };
-}
+};
+$ser_done->recv;
 
 =cut

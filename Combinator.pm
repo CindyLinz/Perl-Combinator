@@ -4,15 +4,45 @@ use strict;
 use warnings;
 
 use Filter::Simple;
+use AE;
+
+sub once {
+    my $sub = shift;
+    my $args_ref = \@_;
+    my $t;
+    $t = AE::idle sub {
+        undef $t;
+        $sub->(@$args_ref);
+    };
+    return;
+}
+
+sub lazy_sub {
+    my $sub_ref = shift;
+    my $args_ref = \@_;
+    return sub { $$sub_ref->(@$args_ref) };
+}
+
+sub lazy_once {
+    my $sub_ref = shift;
+    my $args_ref = \@_;
+    my $t;
+    $t = AE::idle sub {
+        undef $t;
+        $$sub_ref->(@$args_ref);
+    };
+    return;
+}
 
 sub ser {
     if( !@_ ) {
-        return '{}';
+        return '';
     }
     my $code = shift;
     my $next = &ser;
-    $code =~ s/{{next}}/sub$next/ig;
-    return "{$code}";
+    $code =~ s/{{next_sub}}/Combinator::lazy_sub(\$Combinator::holder)/ig;
+    $code =~ s/{{next}}/Combinator::lazy_once(\$Combinator::holder)/ig;
+    return "$code;\$\$Combinator::holder=sub{local\$Combinator::holder=do{\\my\$foo};$next};";
 }
 
 FILTER_ONLY
@@ -20,7 +50,8 @@ FILTER_ONLY
         s(\bser{{(.*?)\bser}}){
             my @code = split /\bser--/, $1;
             my $out = ser(@code);
-            #warn $out;
+            $out = "Combinator::once sub{local\$Combinator::holder=do{\\my\$foo};$out};";
+            warn $out;
             $out;
         }iges
     };

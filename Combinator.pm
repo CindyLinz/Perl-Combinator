@@ -54,7 +54,7 @@ FILTER_ONLY
         s(\bser{{(.*?)\bser}}){
             my @code = split /\bser--/, $1;
             my $out = ser(@code);
-            $out = "Combinator::once sub{local\$Combinator::holder=do{\\my\$foo};$out};";
+            $out = "{local\$Combinator::holder=do{\\my\$foo};$out};";
             #warn $out;
             $out;
         }iges

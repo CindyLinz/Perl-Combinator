@@ -40,9 +40,13 @@ sub ser {
     }
     my $code = shift;
     my $next = &ser;
-    $code =~ s/{{next_sub}}/Combinator::lazy_sub(\$Combinator::holder)/ig;
-    $code =~ s/{{next}}/Combinator::lazy_once(\$Combinator::holder)/ig;
-    return "$code;\$\$Combinator::holder=sub{local\$Combinator::holder=do{\\my\$foo};$next};";
+    $code =~ s/{{next_def}}/(\$\$Combinator::holder=sub{local\$Combinator::holder=do{\\my\$foo};$next})/ig;
+    #$code =~ s/{{next_sub}}/Combinator::lazy_sub(\$Combinator::holder)/ig;
+    $code =~ s/{{next_run}}/\$\$Combinator::holder->()/ig;
+    $code =~ s/{{next_sub}}/\$\$Combinator::holder/ig;
+    #$code =~ s/{{next}}/Combinator::lazy_once(\$Combinator::holder)/ig;
+    return $code;
+    #return "$code;\$\$Combinator::holder=sub{local\$Combinator::holder=do{\\my\$foo};$next};";
 }
 
 FILTER_ONLY

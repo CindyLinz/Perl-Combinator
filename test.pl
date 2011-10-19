@@ -8,6 +8,7 @@ use AE;
 
 my $ser_done = AE::cv;
 ser{{
+    print "Begin\n";
     my $a = 'a';
     my $t; $t = AE::timer .5, 0, {{next_def}};
     # or
@@ -23,151 +24,33 @@ ser--
 ser--
     print "Second (no delay) $a $b\n";
     my $c = 'c';
-    my $t; $t = AE::timer .5, 0, {{next_def}};
+    ser{{
+        print "Nest begin $a $b $c\n";
+        my $t; $t = AE::timer .5, 0, {{next_def}};
+    ser--
+        undef $t;
+        print "Nest second $a $b $c\n";
+        my $d = 'd';
+        my $t; $t = AE::timer .5, 0, {{next_def}};
+    ser}}
+    print "After nest begin\n";
 ser--
     undef $t;
-    print "Done $a $b $c\n";
+    print "Done $a $b $c $d\n";
     $ser_done->send;
 ser}}
 $ser_done->recv;
 
-=comment
+=comment Expected Output
 
-(Out of date)
+Begin
+First a
+Second (no delay) a b
+Nest begin a b c
+After nest begin
+After Second a
+Nest second a b c
+Done a b c d
 
-my $ser_done = AE::cv;
-Combinator::once sub { local $Combinator::holder = do { \ my $foo };
-    my $a = 'a';
-    my $t; $t = AE::timer .5, 0, Combinator::lazy_sub($Combinator::holder);
-
-    $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
-        undef $t;
-        print "First $a\n";
-        my $b = 'b';
-        Combinator::lazy_once($Combinator::holder);
-        print "After Second $a\n";
-
-        $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
-            print "Second (no delay) $a $b\n";
-            my $c = 'c';
-            my $t; $t = AE::timer .5, 0, Combinator::lazy_sub($Combinator::holder);
-            $$Combinator::holder = sub { local $Combinator::holder = do { \ my $foo };
-                undef $t;
-                print "Done $a $b $c\n";
-                $ser_done->send;
-            };
-        };
-    };
-};
-$ser_done->recv;
-
-=cut
-
-#my $nest_ser_done = AE::cv;
-#ser{{
-#    print "nest begin\n";
-#    my $t; $t = AE::timer .5, 0, {{next}};
-#ser--
-#    undef $t;
-#    print "nest second\n";
-#    ser{{
-#        print "inner begin\n";
-#        my $t; $t = AE::timer .5, 0, {{next}};
-#    ser--
-#        undef $t;
-#        print "inner second\n";
-#        {{next}}->();
-#    ser}}
-#    print "after inner begin (at outer)\n";
-#ser--
-#    print "inner end (at outer)\n";
-#    $nest_ser_done->send;
-#ser}}
-#$nest_ser_done->recv;
-
-=comment
-my $nest_ser_done = AE::cv;
-{
-    print "nest begin\n";
-    my $t; $t = AE::timer .5, 0, sub {
-        undef $t;
-        print "nest second\n";
-        my $next;
-        {
-            print "inner begin\n";
-            my $t; $t = AE::timer .5, 0, sub {
-                undef $t;
-                print "inner second\n";
-                $next->();
-            };
-        }
-        print "after inner begin (at outer)\n";
-        $next = sub {
-            print "inner end (at outer)\n";
-            $nest_ser_done->send;
-        };
-    };
-}
-$nest_ser_done->recv;
-=cut
-
-#ser{{
-#    print "AB begin\n";
-#    my $t; $t = AE::timer .5, 0, {{next}};
-#ser--
-#    undef $t;
-#    par{{
-#        ser{{
-#            print "A begin\n";
-#            my $t; $t = AE::timer 2, 0, {{next}};
-#        ser--
-#            undef $t;
-#            print "A end\n";
-#            {{next}}->();
-#        ser}}
-#    par--
-#        ser{{
-#            my $t; $t = AE::timer 1, 0, {{next}};
-#            print "B begin\n";
-#        ser--
-#            undef $t;
-#            print "B end\n";
-#            {{next}}->();
-#        ser}}
-#    par}}
-#ser--
-#    print "AB end\n";
-#ser}}
-
-=comment
-$par_done = AE::cv;
-{
-    print "AB begin\n";
-    my $t; $t = AE::timer .5, 0, sub {
-        undef $t;
-
-        my $par_cv;
-
-        $par_cv->begin;
-        {
-            print "A begin\n";
-            my $t; $t = AE::timer 2, 0, sub {
-                undef $t;
-                print "A end\n";
-                $par_cv->end;
-            };
-        }
-        $par_cv->begin;
-        {
-            print "B begin\n";
-            my $t; $t = AE::timer 1, 0, sub {
-                undef $t;
-                print "B end\n";
-                $par_cv->end;
-            };
-        }
-    };
-}
-$par_done->recv;
 =cut
 

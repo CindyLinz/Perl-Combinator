@@ -36,6 +36,22 @@ ser--
     print "After nest begin\n";
 ser--
     undef $t;
+    print "Test par\n";
+
+    my $par_cv = AE::cv;
+    $par_cv->begin {{next_def}};
+    for(0..4) ser{{
+        $par_cv->begin;
+        my $n = $_;
+        my $delay = .5 - $_*.02;
+        my $t; $t = AE::timer $delay, 0, {{next_def}};
+    ser--
+        undef $t;
+        print "par $n after $delay\n";
+        $par_cv->end;
+    ser}}
+    $par_cv->end;
+ser--
     print "Done $a $b $c $d\n";
     $ser_done->send;
 ser}}

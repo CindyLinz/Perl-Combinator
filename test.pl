@@ -40,6 +40,7 @@ ser--
 
     my $par_cv = AE::cv;
     $par_cv->begin {{next_def}};
+
     for(0..4) ser{{
         $par_cv->begin;
         my $n = $_;
@@ -47,9 +48,21 @@ ser--
         my $t; $t = AE::timer $delay, 0, {{next_def}};
     ser--
         undef $t;
-        print "par $n after $delay\n";
+        print "par1 $n after $delay\n";
         $par_cv->end;
     ser}}
+
+    for(0..4) ser{{
+        $par_cv->begin;
+        my $n = $_;
+        my $delay = $_*.02;
+        my $t; $t = AE::timer $delay, 0, {{next_def}};
+    ser--
+        undef $t;
+        print "par2 $n after $delay\n";
+        $par_cv->end;
+    ser}}
+
     $par_cv->end;
 ser--
     print "Done $a $b $c $d\n";
@@ -66,6 +79,17 @@ Nest begin a b c
 After nest begin
 After Second a
 Nest second a b c
+Test par
+par2 0 after 0
+par2 1 after 0.02
+par2 2 after 0.04
+par2 3 after 0.06
+par2 4 after 0.08
+par1 4 after 0.42
+par1 3 after 0.44
+par1 2 after 0.46
+par1 1 after 0.48
+par1 0 after 0.5
 Done a b c d
 
 =cut

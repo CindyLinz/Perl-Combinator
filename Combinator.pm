@@ -50,9 +50,9 @@ sub ser {
     #return "$code;\$\$Combinator::holder=sub{local\$Combinator::holder=do{\\my\$foo};$next};";
 }
 
-my $begin_pat = '\bser\{\{';
-my $end_pat = '\bser\}\}';
-my $middle_pat = '\bser--';
+my $begin_pat = '\{\{ser\b';
+my $end_pat = '\}\}ser\b';
+my $middle_pat = '--ser\b';
 my $pat = "($begin_pat((?:(?-2)|(?!$begin_pat).)*)$end_pat)";
 
 sub replace_code {

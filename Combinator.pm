@@ -33,7 +33,7 @@ sub replace_code {
             push @code, $1;
         }
         my $out = ser(@code, $next);
-        "{local\$Combinator::holder;$out};";
+        "{local\$Combinator::holder;$out}";
     }iges
 }
 

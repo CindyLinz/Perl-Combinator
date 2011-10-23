@@ -11,6 +11,7 @@ my $begin_pat;
 my $end_pat;
 my $middle_pat;
 my $pat;
+my $line_shift;
 
 sub import {
     my $self = shift;
@@ -28,6 +29,7 @@ sub import {
     $end_pat = $opt{end};
     $middle_pat = $opt{middle};
     $pat = "($begin_pat((?:(?-2)|(?!$begin_pat).)*)$end_pat)";
+    $line_shift = (caller)[2];
 }
 
 sub ser {
@@ -60,7 +62,7 @@ FILTER {
     replace_code($_, '');
     if( $opt{verbose} ) {
         my $verbose_code = $_;
-        my $n = 0;
+        my $n = $line_shift;
         $verbose_code =~ s/^/sprintf"%6d: ", ++$n/gem;
         print "Code after filtering:\n$verbose_code\nEnd Of Code\n";
     }

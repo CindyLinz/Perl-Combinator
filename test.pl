@@ -2,12 +2,12 @@
 
 use strict;
 use warnings;
-use Combinator verbose => 1;
+use Combinator verbose => 1, begin => qr/\{\{seR\b/;
 
 use AE;
 
 my $_dserone = AE::cv;
-{{ser
+{{seR
     print "Begin\n";
     my $a = 'a';
     my $t; $t = AE::timer .5, 0, {{next_def}};
@@ -24,7 +24,7 @@ my $_dserone = AE::cv;
 --ser
     print "Second (no delay) $a $b\n";
     my $c = 'c';
-    {{ser
+    {{seR
         print "Nest begin $a $b $c\n";
         my $t; $t = AE::timer .5, 0, {{next_def}};
     --ser
@@ -41,7 +41,7 @@ my $_dserone = AE::cv;
     my $par_cv = AE::cv;
     $par_cv->begin {{next_def}};
 
-    for(0..4) {{ser
+    for(0..4) {{seR
         $par_cv->begin;
         my $n = $_;
         my $delay = .5 - $_*.02;
@@ -52,7 +52,7 @@ my $_dserone = AE::cv;
         $par_cv->end;
     }}ser
 
-    for(0..4) {{ser
+    for(0..4) {{seR
         $par_cv->begin;
         my $n = $_;
         my $delay = $_*.02;

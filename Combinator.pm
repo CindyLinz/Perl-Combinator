@@ -7,10 +7,27 @@ use Filter::Simple;
 use AE;
 
 my %opt;
+my $begin_pat;
+my $end_pat;
+my $middle_pat;
+my $pat;
 
 sub import {
     my $self = shift;
-    %opt = @_;
+    %opt = (
+        verbose => 0, # 設為 1 會印出 Filter 後的程式碼
+        begin => qr/\{\{ser\b/,
+        middle => qr/--ser\b/,
+        end => qr/\}\}ser\b/,
+        def => qr/\{\{next_def\}\}/,
+        run => qr/\{\{next_run\}\}/,
+        sub => qr/\{\{next_sub\}\}/,
+        @_
+    );
+    $begin_pat = $opt{begin};
+    $end_pat = $opt{end};
+    $middle_pat = $opt{middle};
+    $pat = "($begin_pat((?:(?-2)|(?!$begin_pat).)*)$end_pat)";
 }
 
 sub ser {
@@ -20,16 +37,11 @@ sub ser {
     my $code = shift;
     my $next = &ser;
     replace_code($code, $next);
-    $code =~ s/{{next_def}}/(\$Combinator::holder=sub{local\$Combinator::holder;$next})/ig;
-    $code =~ s/{{next_run}}/\$Combinator::holder->()/ig;
-    $code =~ s/{{next_sub}}/\$Combinator::holder/ig;
+    $code =~ s/$opt{def}/(\$Combinator::holder=sub{local\$Combinator::holder;$next})/g;
+    $code =~ s/$opt{run}/\$Combinator::holder->()/g;
+    $code =~ s/$opt{sub}/\$Combinator::holder/g;
     return $code;
 }
-
-my $begin_pat = '\{\{ser\b';
-my $end_pat = '\}\}ser\b';
-my $middle_pat = '--ser\b';
-my $pat = "($begin_pat((?:(?-2)|(?!$begin_pat).)*)$end_pat)";
 
 sub replace_code {
     my $next = $_[1];

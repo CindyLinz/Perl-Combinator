@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Combinator;
+use Combinator verbose => 1;
 
 use AE;
 
@@ -12,14 +12,14 @@ my $_dserone = AE::cv;
     my $a = 'a';
     my $t; $t = AE::timer .5, 0, {{next_def}};
     # or
-    # my $t; {{next_def}}; $t = AE::timer .5, 0, {{next_sub}};
+    # my $t; {{next_def }}; $t = AE::timer .5, 0, {{next_sub }};
 --ser
     undef $t;
     print "First $a\n";
     my $b = 'b';
     {{next_def}}->();
     # or
-    # {{next_def}}; {{next_run}};
+    # {{next_def }}; {{next_run }};
     print "After Second $a\n";
 --ser
     print "Second (no delay) $a $b\n";

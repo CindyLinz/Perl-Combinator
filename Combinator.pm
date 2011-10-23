@@ -6,6 +6,13 @@ use warnings;
 use Filter::Simple;
 use AE;
 
+my %opt;
+
+sub import {
+    my $self = shift;
+    %opt = @_;
+}
+
 sub ser {
     if( @_ <= 1 ) { # next only
         return $_[0];
@@ -37,10 +44,14 @@ sub replace_code {
     }iges
 }
 
-FILTER_ONLY
-    code_no_comments => sub {
-        replace_code($_, '');
-        #warn "{{{{{$_}}}}}";
-    };
+FILTER {
+    replace_code($_, '');
+    if( $opt{verbose} ) {
+        my $verbose_code = $_;
+        my $n = 0;
+        $verbose_code =~ s/^/sprintf"%6d: ", ++$n/gem;
+        print "Code after filtering:\n$verbose_code\nEnd Of Code\n";
+    }
+};
 
 1;

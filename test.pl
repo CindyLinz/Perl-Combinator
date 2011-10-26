@@ -27,6 +27,9 @@ my $ser_done = AE::cv;
       --ser
         undef $t;
         print "Nest second $a $b $c $d\n";
+        return;
+      --ser
+        print "Won't be here\n";
     }}com
     print "After nest begin\n";
   --ser

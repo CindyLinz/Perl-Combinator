@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Filter::Simple;
+use Guard;
 
 my %opt;
 my $begin_pat;
@@ -72,7 +73,7 @@ sub ser {
     my $next = &ser;
     replace_code($depth, $code);
     $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{Combinator::cv_end(\$t,\\\@_)}})/g;
-    my $out = "local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(\$Combinator::cv0,sub{local\$Combinator::cv0=shift;$next}))";
+    my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(\$Combinator::cv0,sub{local\$Combinator::cv0=shift;$next}));\$Combinator::guard->cancel";
     return $out;
 }
 

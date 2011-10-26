@@ -2,73 +2,84 @@
 
 use strict;
 use warnings;
-use Combinator verbose => 1, begin => qr/\{\{seR\b/;
+use Combinator verbose => 1;
 
 use AE;
 
-my $_dserone = AE::cv;
-{{seR
+my $ser_done = AE::cv;
+{{com
     print "Begin\n";
     my $a = 'a';
-    my $t; $t = AE::timer .5, 0, {{next_def}};
-    # or
-    # my $t; {{next_def }}; $t = AE::timer .5, 0, {{next_sub }};
---ser
+    my $t; $t = AE::timer .5, 0, {{next}};
+
+  --ser
     undef $t;
     print "First $a\n";
     my $b = 'b';
-    {{next_def}}->();
-    # or
-    # {{next_def }}; {{next_run }};
-    print "After Second $a\n";
---ser
+
+  --ser
     print "Second (no delay) $a $b\n";
     my $c = 'c';
-    {{seR
+    {{com
         print "Nest begin $a $b $c\n";
-        my $t; $t = AE::timer .5, 0, {{next_def}};
-    --ser
-        undef $t;
-        print "Nest second $a $b $c\n";
+        my $t; $t = AE::timer .5, 0, {{next}};
         my $d = 'd';
-        my $t; $t = AE::timer .5, 0, {{next_def}};
-    }}ser
+      --ser
+        undef $t;
+        print "Nest second $a $b $c $d\n";
+    }}com
     print "After nest begin\n";
---ser
-    undef $t;
+  --ser
     print "Test par\n";
 
-    my $par_cv = AE::cv;
-    $par_cv->begin {{next_def}};
-
-    for(0..4) {{seR
-        $par_cv->begin;
+    for(0..4) {{com
         my $n = $_;
         my $delay = .5 - $_*.02;
-        my $t; $t = AE::timer $delay, 0, {{next_def}};
-    --ser
+        my $t; $t = AE::timer $delay, 0, {{next}};
+      --ser
         undef $t;
         print "par1 $n after $delay\n";
-        $par_cv->end;
-    }}ser
+        {{next}}->($n); # push args to the next receiver
+    }}com
 
-    for(0..4) {{seR
-        $par_cv->begin;
+    for(0..4) {{com
         my $n = $_;
         my $delay = $_*.02;
-        my $t; $t = AE::timer $delay, 0, {{next_def}};
-    --ser
+        my $t; $t = AE::timer $delay, 0, {{next}};
+      --ser
         undef $t;
         print "par2 $n after $delay\n";
-        $par_cv->end;
-    }}ser
+        {{next}}->($n); # push args to the next receiver
+    }}com
 
-    $par_cv->end;
---ser
-    print "Done $a $b $c $d\n";
-    $_dserone->send;
-}}ser
-$_dserone->recv;
+  --ser
+    print "Done $a $b $c @_\n"; # print the received args
+    $ser_done->send;
+}}com
+$ser_done->recv;
+
+my $par_cv = AE::cv;
+{{com
+    print "Jobs begin\n";
+    {{com
+        print "Job 1 begin\n";
+        my $t; $t = AE::timer 1, 0, {{next}};
+      --ser
+        undef $t;
+        print "Job 1 done\n";
+    --com
+        print "Job 2 begin\n";
+        my $t; $t = AE::timer .5, 0, {{next}};
+      --ser
+        undef $t;
+        print "Job 2 done\n";
+    }}com
+    print "Jobs begun\n";
+  --ser
+    print "Jobs done\n";
+    $par_cv->send;
+}}com
+$par_cv->recv;
 
 =comment Expected Output
 
@@ -77,8 +88,7 @@ First a
 Second (no delay) a b
 Nest begin a b c
 After nest begin
-After Second a
-Nest second a b c
+Nest second a b c d
 Test par
 par2 0 after 0
 par2 1 after 0.02
@@ -90,6 +100,13 @@ par1 3 after 0.44
 par1 2 after 0.46
 par1 1 after 0.48
 par1 0 after 0.5
-Done a b c d
+Done a b c 0 1 2 3 4 4 3 2 1 0
+Jobs begin
+Job 1 begin
+Job 2 begin
+Jobs begun
+Job 2 done
+Job 1 done
+Jobs done
 
 =cut

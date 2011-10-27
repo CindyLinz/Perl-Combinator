@@ -84,6 +84,40 @@ my $par_cv = AE::cv;
 }}com
 $par_cv->recv;
 
+my $cir_cv = AE::cv;
+{{com
+    my $n = 0;
+    my $m = 0;
+    {{cir
+        ++$n;
+        print "Cir1 $n begin\n";
+        my $t; $t = AE::timer .2, 0, {{next}};
+      --ser
+        undef $t;
+        print "Cir1 $n second\n";
+        my $t; $t = AE::timer .2, 0, {{next}};
+      --ser
+        undef $t;
+        return if( $n == 8 );
+        print "Cir1 $n repeat\n";
+    --cir
+        ++$m;
+        print "Cir2 $m begin\n";
+        my $t; $t = AE::timer .5, 0, {{next}};
+      --ser
+        undef $t;
+        print "Cir2 $m second\n";
+        my $t; $t = AE::timer .5, 0, {{next}};
+      --ser
+        undef $t;
+        return if( $m == 3 );
+        print "Cir2 $m repeat\n";
+    }}com
+--ser
+    $cir_cv->send;
+}}com
+$cir_cv->recv;
+
 =comment Expected Output
 
 Begin
@@ -111,5 +145,36 @@ Jobs begun
 Job 2 done
 Job 1 done
 Jobs done
+Cir1 1 begin
+Cir2 1 begin
+Cir1 1 second
+Cir1 1 repeat
+Cir1 2 begin
+Cir2 1 second
+Cir1 2 second
+Cir1 2 repeat
+Cir1 3 begin
+Cir2 1 repeat
+Cir2 2 begin
+Cir1 3 second
+Cir1 3 repeat
+Cir1 4 begin
+Cir1 4 second
+Cir2 2 second
+Cir1 4 repeat
+Cir1 5 begin
+Cir1 5 second
+Cir2 2 repeat
+Cir2 3 begin
+Cir1 5 repeat
+Cir1 6 begin
+Cir1 6 second
+Cir1 6 repeat
+Cir1 7 begin
+Cir2 3 second
+Cir1 7 second
+Cir1 7 repeat
+Cir1 8 begin
+Cir1 8 second
 
 =cut

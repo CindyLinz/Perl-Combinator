@@ -100,6 +100,8 @@ my $cir_cv = AE::cv;
         undef $t;
         return if( $n == 8 );
         print "Cir1 $n repeat\n";
+    --com
+        print "One shot!\n";
     --cir
         ++$m;
         print "Cir2 $m begin\n";
@@ -146,6 +148,7 @@ Job 2 done
 Job 1 done
 Jobs done
 Cir1 1 begin
+One shot!
 Cir2 1 begin
 Cir1 1 second
 Cir1 1 repeat

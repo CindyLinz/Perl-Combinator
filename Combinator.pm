@@ -39,7 +39,7 @@ sub import {
     $par_pat = $opt{par};
     $cir_begin_pat = $opt{cir_begin};
     $cir_par_pat = $opt{cir_par};
-    $com_pat = qr/($begin_pat((?:(?-2)|(?!$begin_pat).)*)$end_pat)/s;
+    $com_pat = qr/($begin_pat((?:(?-2)|(?!$begin_pat).)*?)$end_pat)/s;
     $token_pat = qr/$com_pat|(?!$begin_pat)./s;
     $line_shift = (caller)[2];
 }

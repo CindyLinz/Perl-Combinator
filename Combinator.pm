@@ -5,7 +5,7 @@ use warnings;
 
 use Filter::Simple;
 use Guard;
-use callee;
+use Devel::Caller;
 
 my %opt;
 my $begin_pat;
@@ -89,7 +89,7 @@ sub com { # depth, code, cir
     my @ser;
     $code .= "\n" if( substr($code, -1) eq "\n" );
     push @ser, $1 while( $code =~ m/(?:^|$ser_pat)($token_pat*?)(?=$ser_pat|$)/gs );
-    my $out = "{&{sub{local\$Combinator::head=[1,callee::callee];local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];" .
+    my $out = "{&{sub{local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];" .
         ser($depth+1, @ser, $cir ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)") .
         "}}}";
     return $out;

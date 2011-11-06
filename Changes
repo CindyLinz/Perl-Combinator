@@ -1,5 +1,8 @@
 Revision history for Combinator
 
+0.02    2011.11.7
+        Fix required perl version; remove pod-coverage
+
 0.01    2011.10.31
         First version, released on an unsuspecting world.
 

@@ -10,6 +10,5 @@ t/03-cb_arg.t
 t/04-cir.t
 t/boilerplate.t
 t/manifest.t
-t/pod-coverage.t
 t/pod.t
 eg/demo_all.pl

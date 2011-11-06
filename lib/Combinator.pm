@@ -1,6 +1,6 @@
 package Combinator;
 
-use 5.006;
+use 5.010;
 use strict;
 use warnings;
 
@@ -10,11 +10,11 @@ Combinator - Intuitively write async program serially, parallel, or circularly
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 =head1 SYNOPSIS

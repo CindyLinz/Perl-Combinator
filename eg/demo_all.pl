@@ -148,7 +148,7 @@ Jobs begin
 Job 1 begin
 Job 2 begin
 Jobs begun
-next should be invoked only once at demo_all.pl line 82.
+next should be invoked only once at demo_all.pl line 84.
 Job 2 done
 Job 1 done
 Jobs done

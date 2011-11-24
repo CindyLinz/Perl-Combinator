@@ -596,8 +596,7 @@ sub ser {
     unshift @_, $depth;
     my $next = &ser;
     replace_code($depth, $code);
-    #$code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{Combinator::cv_end(\$t,\\\@_)}})/g;
-    $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{if(\$t){Combinator::cv_end(\$t,\\\@_);undef\$t}else{warn"next should be invoked only once"}}})/g;
+    $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{if(\$t){Combinator::cv_end(\$t,\\\@_);undef\$t}else{my(undef,\$f,\$l)=caller;warn"next should be invoked only once at \$f line \$l.\\n"}}})/g;
     my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(\$Combinator::head,\$Combinator::cv0,sub{local\$Combinator::head=shift;local\$Combinator::cv0=shift;$next}));\$Combinator::guard->cancel";
     return $out;
 }

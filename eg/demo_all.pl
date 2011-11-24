@@ -10,7 +10,7 @@ my $ser_done = AE::cv;
 {{com
     print "Begin\n";
     my $a = 'a';
-    my $t; $t = AE::timer .5, 0, {{next}};
+    my $t = AE::timer .5, 0, {{next}};
 
   --ser
     undef $t;
@@ -22,7 +22,7 @@ my $ser_done = AE::cv;
     my $c = 'c';
     {{com
         print "Nest begin $a $b $c\n";
-        my $t; $t = AE::timer .5, 0, {{next}};
+        my $t = AE::timer .5, 0, {{next}};
         my $d = 'd';
       --ser
         undef $t;
@@ -38,7 +38,7 @@ my $ser_done = AE::cv;
     for(0..4) {{com
         my $n = $_;
         my $delay = .5 - $_*.02;
-        my $t; $t = AE::timer $delay, 0, {{next}};
+        my $t = AE::timer $delay, 0, {{next}};
       --ser
         undef $t;
         print "par1 $n after $delay\n";
@@ -48,7 +48,7 @@ my $ser_done = AE::cv;
     for(0..4) {{com
         my $n = $_;
         my $delay = $_*.02;
-        my $t; $t = AE::timer $delay, 0, {{next}};
+        my $t = AE::timer $delay, 0, {{next}};
       --ser
         undef $t;
         print "par2 $n after $delay\n";
@@ -66,18 +66,22 @@ my $par_cv = AE::cv;
     print "Jobs begin\n";
     {{com
         print "Job 1 begin\n";
-        my $t; $t = AE::timer 1, 0, {{next}};
+        my $t = AE::timer 1, 0, {{next}};
       --ser
         undef $t;
         print "Job 1 done\n";
     --com
         print "Job 2 begin\n";
-        my $t; $t = AE::timer .5, 0, {{next}};
+        my $t = AE::timer .5, 0, {{next}};
       --ser
         undef $t;
         print "Job 2 done\n";
     }}com
     print "Jobs begun\n";
+
+    my $next = {{next}};
+    $next->();
+    $next->(); # next should be invoked only once
   --ser
     print "Jobs done\n";
     $par_cv->send;
@@ -91,11 +95,11 @@ my $cir_cv = AE::cv;
     {{cir
         ++$n;
         print "Cir1 $n begin\n";
-        my $t; $t = AE::timer .2, 0, {{next}};
+        my $t = AE::timer .2, 0, {{next}};
       --ser
         undef $t;
         print "Cir1 $n second\n";
-        my $t; $t = AE::timer .2, 0, {{next}};
+        my $t = AE::timer .2, 0, {{next}};
       --ser
         undef $t;
         return if( $n == 8 );
@@ -105,11 +109,11 @@ my $cir_cv = AE::cv;
     --cir
         ++$m;
         print "Cir2 $m begin\n";
-        my $t; $t = AE::timer .5, 0, {{next}};
+        my $t = AE::timer .5, 0, {{next}};
       --ser
         undef $t;
         print "Cir2 $m second\n";
-        my $t; $t = AE::timer .5, 0, {{next}};
+        my $t = AE::timer .5, 0, {{next}};
       --ser
         undef $t;
         return if( $m == 3 );
@@ -144,6 +148,7 @@ Jobs begin
 Job 1 begin
 Job 2 begin
 Jobs begun
+next should be invoked only once at demo_all.pl line 82.
 Job 2 done
 Job 1 done
 Jobs done

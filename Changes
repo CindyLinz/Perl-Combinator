@@ -1,5 +1,14 @@
 Revision history for Combinator
 
+0.03    2011.11.24
+        Simplify and fix bugs in the sample code in the document.
+
+        Fix a memory leak issue that happens when cooperative with
+        AnyEvent timer.
+
+        Prevent invoking {{next}} more than once, and also
+        add a warning message.
+
 0.02    2011.11.7
         Fix required perl version; remove pod-coverage
 

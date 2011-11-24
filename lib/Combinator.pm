@@ -10,11 +10,11 @@ Combinator - Intuitively write async program serially, parallel, or circularly
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 =head1 SYNOPSIS
@@ -27,17 +27,17 @@ The following is the basic form for serializing a sequence of async code blocks:
     my $cv = AE::cv;
     {{com
         print "sleep 1 second\n";
-        my $t; $t = AE::timer 1, 0, {{next}};
+        my $t = AE::timer 1, 0, {{next}};
       --ser
         undef $t;
-        my $t; $t = AE::timer 0.5, 0, {{next}};
+        my $t = AE::timer 0.5, 0, {{next}};
         print "sleep 0.5 second\n"; # this line will be executed before the next block
       --ser
         undef $t;
         print "wait for 3 timers at the same time\n";
-        my $t1; $t1 = AE::timer 1, 0, {{next}};
-        my $t2; $t2 = AE::timer 2, 0, {{next}};
-        my $t3; $t3 = AE::timer 1.5, 0, {{next}};
+        my $t1 = AE::timer 1, 0, {{next}};
+        my $t2 = AE::timer 2, 0, {{next}};
+        my $t3 = AE::timer 1.5, 0, {{next}};
       --ser
         undef $t1; undef $t2; undef $t3;
         # after the max time interval of them (2 seconds)
@@ -147,16 +147,19 @@ You'll get all the args concatenated together.
     {{com
         {{next}}->(0);
         {{com
-            my $t; $t = AE::timer 1, 0, {{next}};
+            my $t = AE::timer 1, 0, {{next}};
           --ser
+            undef $t;
             {{next}}->(1);
         --com
-            my $t; $t = AE::timer .6, 0, {{next}};
+            my $t = AE::timer .6, 0, {{next}};
           --ser
+            undef $t;
             {{next}}->(2);
         --com
-            my $t; $t = AE::timer .3, 0, {{next}};
+            my $t = AE::timer .3, 0, {{next}};
           --ser
+            undef $t;
             {{next}}->(3);
         }}com
         {{next}}->(4);
@@ -576,9 +579,11 @@ sub att_sub {
 sub cv_end { # (cv, args)
     --$_[0][0];
     push @{$_[0][2]//=[]}, @{$_[1]} if $_[1];
-    if( !$_[0][0] && $_[0][1] ) {
-        my $cb = delete $_[0][1];
-        $cb->(@{$_[0][2]});
+    if( !$_[0][0] ) {
+        if( $_[0][1] ) {
+            delete($_[0][1])->(@{$_[0][2]});
+        }
+        undef $_[0][2];
     }
 }
 sub cv_cb { # (cv, cb)
@@ -587,6 +592,7 @@ sub cv_cb { # (cv, cb)
     }
     else {
         $_[1](@{$_[0][2]});
+        undef $_[0][2];
     }
 }
 
@@ -599,7 +605,8 @@ sub ser {
     unshift @_, $depth;
     my $next = &ser;
     replace_code($depth, $code);
-    $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{Combinator::cv_end(\$t,\\\@_)}})/g;
+    #$code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{Combinator::cv_end(\$t,\\\@_)}})/g;
+    $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{if(\$t){Combinator::cv_end(\$t,\\\@_);undef\$t}else{warn"next should be invoked only once"}}})/g;
     my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(\$Combinator::head,\$Combinator::cv0,sub{local\$Combinator::head=shift;local\$Combinator::cv0=shift;$next}));\$Combinator::guard->cancel";
     return $out;
 }

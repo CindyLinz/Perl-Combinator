@@ -48,7 +48,7 @@ The following is the basic form for serializing a sequence of async code blocks:
     }}com
     $cv->recv;
 
-The following block will wait for previous block's end and all the {{next}} in the
+The following block will wait for previous block's end and all the {{next}}s in the
 previous block been called.
 
 And also, it could be nested {{com..}}com blocks in the code block.
@@ -103,7 +103,7 @@ and optionally use 'return' to stop the {{com..}}com block.
     $cv->recv;
 
 And also, the following block will get all the arguments when {{next}} is called.
-This is useful when integrate with other callback based module.
+This is useful when integrating with other callback based module.
 
     use Combinator;
     use AE;

@@ -55,8 +55,23 @@ my $ser_done = AE::cv;
         {{next}}->($n); # push args to the next receiver
     }}com
 
+    my @nex;
+    for(0..2) {{com
+        my $n = $_;
+        my $delay = .5 - $_*.03;
+        my $t; $t = AE::timer $delay, 0, {{nex
+            undef $t;
+            $t = AE::timer .05, 0, {{next}};
+            $delay += .05;
+          --ser
+            undef $t;
+            $nex[$n] = $n;
+            print "nex $n after $delay\n";
+        }}nex;
+    }}com
+
   --ser
-    print "Done $a $b $c @_\n"; # print the received args
+    print "Done $a $b $c @nex @_\n"; # print the received args
     $ser_done->send;
 }}com
 $ser_done->recv;
@@ -142,13 +157,16 @@ par1 4 after 0.42
 par1 3 after 0.44
 par1 2 after 0.46
 par1 1 after 0.48
+nex 2 after 0.49
 par1 0 after 0.5
-Done a b c 0 1 2 3 4 4 3 2 1 0
+nex 1 after 0.52
+nex 0 after 0.55
+Done a b c 0 1 2 0 1 2 3 4 4 3 2 1 0
 Jobs begin
 Job 1 begin
 Job 2 begin
 Jobs begun
-next should be invoked only once at demo_all.pl line 84.
+next should be invoked only once at demo_all.pl line 99.
 Job 2 done
 Job 1 done
 Jobs done

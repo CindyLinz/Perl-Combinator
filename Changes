@@ -1,5 +1,11 @@
 Revision history for Combinator
 
+0.04    2011.2.7
+        Introduce {{nex .. }}nex block for finer controled version
+        of {{next}}
+
+        Treat }}com }}cir }}next as the same by default.
+
 0.03    2011.11.24
         Simplify and fix bugs in the sample code in the document.
 

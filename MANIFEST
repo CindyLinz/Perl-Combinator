@@ -8,6 +8,7 @@ t/01-serial.t
 t/02-nested.t
 t/03-cb_arg.t
 t/04-cir.t
+t/05-nex.t
 t/boilerplate.t
 t/manifest.t
 t/pod.t

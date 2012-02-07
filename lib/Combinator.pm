@@ -14,7 +14,7 @@ Version 0.03
 
 =cut
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 
 =head1 SYNOPSIS
@@ -220,6 +220,52 @@ or use --cir instead of --com if it's not the first block.
 
     AE::cv->recv;
 
+If you need finer controlled {{next}}, use {{nex .. }}nex block to
+replace {{next}}.
+
+    use Combinator;
+    use AE;
+    use AnyEvent::HTTP;
+
+    {{com
+        my($a_res, $b_res);
+        http_get 'http://site.a/', {{nex $a_res = $_[1] }}nex;
+        http_get 'http://site.b/', {{nex $b_res = $_[1] }}nex;
+      --ser
+        print "Completed!\n";
+        print "SiteA = $a_res\n";
+        print "SiteB = $b_res\n";
+    }}com
+
+    AE::cv->recv;
+
+Though without {{nex .. }}nex block, you can still write:
+
+    use Combinator;
+    use AE;
+    use AnyEvent::HTTP;
+
+    {{com
+        my($a_res, $b_res);
+        {{com
+            http_get 'http://site.a/', {{next}};
+          --ser
+            $a_res = $_[1];
+        --com
+            http_get 'http://site.b/', {{next}};
+          --ser
+            $b_res = $_[1];
+        }}com
+      --ser
+        print "Completed!\n";
+        print "SiteA = $a_res\n";
+        print "SiteB = $b_res\n";
+    }}com
+
+    AE::cv->recv;
+
+It's up to you to choose which one to use.
+
 =head1 WHEN YOU SHOULD USE THIS MODULE
 
 =head2 When you are tired of writing layered closures
@@ -373,13 +419,15 @@ Set to 1 if you want to see the generated code.
 
 =head2 cir_begin => qr/\{\{cir\b/
 
+=head2 nex_begin => qr/\{\{nex\b/
+
 =head2 ser => qr/--ser\b/
 
 =head2 par => qr/--com\b/
 
 =head2 cir_par => qr/--cir\b/
 
-=head2 end => qr/\}\}com\b/
+=head2 end => qr/\}\}(?:com|cir|nex)\b/
 
 =head2 next => qr/\{\{next\}\}/
 
@@ -530,6 +578,7 @@ my $par_pat;
 my $cir_par_pat;
 my $com_pat;
 my $token_pat;
+my $nex_begin_pat;
 my $line_shift;
 
 our $cv1 = [];
@@ -540,18 +589,20 @@ sub import {
         verbose => 0,
         begin => qr/\{\{com\b/,
         cir_begin => qr/\{\{cir\b/,
+        nex_begin => qr/\{\{nex\b/,
         ser => qr/--ser\b/,
         par => qr/--com\b/,
         cir_par => qr/--cir\b/,
-        end => qr/\}\}com\b/,
+        end => qr/\}\}(?:com|cir|nex)\b/,
         next => qr/\{\{next\}\}/,
         @_
     );
-    $begin_pat = qr/$opt{begin}|$opt{cir_begin}/;
+    $begin_pat = qr/$opt{begin}|$opt{cir_begin}|(?:$opt{nex_begin})/;
     $end_pat = $opt{end};
     $ser_pat = $opt{ser};
     $par_pat = $opt{par};
     $cir_begin_pat = $opt{cir_begin};
+    $nex_begin_pat = $opt{nex_begin};
     $cir_par_pat = $opt{cir_par};
     $com_pat = qr/($begin_pat((?:(?-2)|(?!$begin_pat).)*?)$end_pat)/s;
     $token_pat = qr/$com_pat|(?!$begin_pat)./s;
@@ -601,14 +652,25 @@ sub ser {
     return $out;
 }
 
-sub com { # depth, code, cir
-    my($depth, $code, $cir) = @_;
+sub com { # depth, code, head
+    my($depth, $code, $head) = @_;
     my @ser;
     $code .= "\n" if( substr($code, -1) eq "\n" );
     push @ser, $1 while( $code =~ m/(?:^|$ser_pat)($token_pat*?)(?=$ser_pat|$)/gs );
-    my $out = "{&{sub{local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];" .
-        ser($depth+1, @ser, $cir ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)") .
-        "}}}";
+
+    my $delayed = $head =~ $nex_begin_pat;
+
+    my $out = (
+            $delayed ?
+                "(do{++\$Combinator::cv1->[0];Combinator::att_sub(do{\\(my\$t=1)},\$Combinator::cv1,sub{if(!\${\$_[0]}){my(undef,\$f,\$l)=caller;warn\"nex should be invoked only once at \$f line \$l.\\n\";return}--\${\$_[0]};shift;local\$Combinator::cv0=shift;" :
+                "{&{sub{local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];"
+        )."local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];" .
+        ser($depth+1, @ser, $head =~ /^(?:$cir_par_pat|$cir_begin_pat)$/ ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)") .
+        (
+            $delayed ?
+                "})})" :
+                "}}}"
+        );
     return $out;
 }
 
@@ -619,7 +681,7 @@ sub replace_code {
         my $out = '';
         while( $code =~ /($begin_pat|$par_pat|$cir_par_pat)($token_pat*?)(?=($par_pat|$cir_par_pat|$end_pat))/g ) {
             my $fragment = $2;
-            $out .= com($depth, $fragment, $1 =~ /^(?:$cir_par_pat|$cir_begin_pat)$/);
+            $out .= com($depth, $fragment, $1);
         }
         $out;
     }ge;

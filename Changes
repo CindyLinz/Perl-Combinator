@@ -1,5 +1,8 @@
 Revision history for Combinator
 
+0.04.01 2011.2.8
+        Fix the version number in the document.
+
 0.04    2011.2.7
         Introduce {{nex .. }}nex block for finer controled version
         of {{next}}

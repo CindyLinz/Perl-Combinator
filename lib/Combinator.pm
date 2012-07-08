@@ -10,12 +10,12 @@ Combinator - Intuitively write async program serially, parallel, or circularly
 
 =head1 VERSION
 
-Version 0.04
+Version 0.4.2
 
 =cut
 
-our $VERSION = '0.04.01';
-
+use version;
+our $VERSION = qv 'v0.4.2';
 
 =head1 SYNOPSIS
 

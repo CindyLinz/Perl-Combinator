@@ -17,6 +17,7 @@ WriteMakefile(
         'Filter::Simple' => 0,
         'Guard' => 0,
         'Devel::Caller' => 0,
+        'version' => 0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Combinator-*' },

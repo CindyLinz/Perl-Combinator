@@ -609,9 +609,10 @@ sub import {
 }
 
 sub att_sub {
-    my($att1, $att2, $cb) = @_;
+    my $cb = shift;
+    my @arg = @_;
     sub {
-        unshift @_, $att1, $att2;
+        unshift @_, @arg;
         &$cb;
     }
 }
@@ -647,7 +648,7 @@ sub ser {
     my $next = &ser;
     replace_code($depth, $code);
     $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{if(\$t){Combinator::cv_end(\$t,\\\@_);undef\$t}else{my(undef,\$f,\$l)=caller;warn"next should be invoked only once at \$f line \$l.\\n"}}})/g;
-    my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(\$Combinator::head,\$Combinator::cv0,sub{local\$Combinator::head=shift;local\$Combinator::cv0=shift;$next}));\$Combinator::guard->cancel";
+    my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(sub{local\$Combinator::head=shift;local\$Combinator::cv0=shift;$next},\$Combinator::head,\$Combinator::cv0));\$Combinator::guard->cancel";
     return $out;
 }
 
@@ -662,20 +663,14 @@ sub com { # depth, code, head
         return "{$ser[0]}";
     }
 
-    my $delayed = $head =~ $nex_begin_pat;
+    my $out_body = "local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];" . ser($depth+1, @ser, $head =~ /^(?:$cir_par_pat|$cir_begin_pat)$/ ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)");
 
-    my $out = (
-            $delayed ?
-                "(do{++\$Combinator::cv1->[0];Combinator::att_sub(do{\\(my\$t=1)},\$Combinator::cv1,sub{if(!\${\$_[0]}){my(undef,\$f,\$l)=caller;warn\"nex should be invoked only once at \$f line \$l.\\n\";return}--\${\$_[0]};shift;local\$Combinator::cv0=shift;" :
-                "{&{sub{local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];"
-        )."local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];" .
-        ser($depth+1, @ser, $head =~ /^(?:$cir_par_pat|$cir_begin_pat)$/ ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)") .
-        (
-            $delayed ?
-                "})})" :
-                "}}}"
-        );
-    return $out;
+    if( $head =~ $nex_begin_pat ) {
+        return "(do{++\$Combinator::cv1->[0];Combinator::att_sub(sub{if(!\${\$_[0]}){my(undef,\$f,\$l)=caller;warn\"nex should be invoked only once at \$f line \$l.\\n\";return}--\${\$_[0]};shift;local\$Combinator::cv0=shift;$out_body},do{\\(my\$t=1)},\$Combinator::cv1)})";
+    }
+    else {
+        return "{&{sub{local\$Combinator::cv0=\$Combinator::cv1;++\$Combinator::cv0->[0];$out_body}}}"
+    }
 }
 
 sub replace_code {

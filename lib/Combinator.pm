@@ -639,31 +639,29 @@ sub cv_cb { # (cv, cb)
 }
 
 sub ser {
-    my $depth = shift;
     if( @_ <= 1 ) { # next only
         return $_[0];
     }
     my $code = shift;
-    unshift @_, $depth;
     my $next = &ser;
-    replace_code($depth, $code);
+    replace_code($code);
     $code =~ s/$opt{next}/(do{my\$t=\$Combinator::cv1;++\$t->[0];sub{if(\$t){Combinator::cv_end(\$t,\\\@_);undef\$t}else{my(undef,\$f,\$l)=caller;warn"next should be invoked only once at \$f line \$l.\\n"}}})/g;
     my $out = "local\$Combinator::guard=Guard::guard{Combinator::cv_end(\$Combinator::cv0,\\\@_)};local\$Combinator::cv1=[1];$code;--\$Combinator::cv1->[0];Combinator::cv_cb(\$Combinator::cv1,Combinator::att_sub(sub{local\$Combinator::head=shift;local\$Combinator::cv0=shift;$next},\$Combinator::head,\$Combinator::cv0));\$Combinator::guard->cancel";
     return $out;
 }
 
-sub com { # depth, code, head
-    my($depth, $code, $head) = @_;
+sub com { # code, head
+    my($code, $head) = @_;
     my @ser;
     $code .= "\n" if( substr($code, -1) eq "\n" );
     push @ser, $1 while( $code =~ m/(?:^|$ser_pat)($token_pat*?)(?=$ser_pat|$)/gs );
 
     if( @ser == 1 && $head !~ $cir_par_pat && $head !~ $cir_begin_pat && $head !~ $nex_begin_pat ) {
-        replace_code($depth, @ser);
+        replace_code(@ser);
         return "{$ser[0]}";
     }
 
-    my $out_body = "local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];" . ser($depth+1, @ser, $head =~ /^(?:$cir_par_pat|$cir_begin_pat)$/ ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)");
+    my $out_body = "local\$Combinator::head=[1,Devel::Caller::caller_cv(0)];" . ser(@ser, $head =~ /^(?:$cir_par_pat|$cir_begin_pat)$/ ? "--\$Combinator::cv0->[0];\$Combinator::cv1=\$Combinator::cv0;Combinator::cv_end(\$Combinator::head,\\\@_)" : "Combinator::cv_end(\$Combinator::cv0,\\\@_)");
 
     if( $head =~ $nex_begin_pat ) {
         return "(do{++\$Combinator::cv1->[0];Combinator::att_sub(sub{if(!\${\$_[0]}){my(undef,\$f,\$l)=caller;warn\"nex should be invoked only once at \$f line \$l.\\n\";return}--\${\$_[0]};shift;local\$Combinator::cv0=shift;$out_body},do{\\(my\$t=1)},\$Combinator::cv1)})";
@@ -674,20 +672,19 @@ sub com { # depth, code, head
 }
 
 sub replace_code {
-    my $depth = shift;
     $_[0] =~ s[$com_pat]{
         my $code = $1;
         my $out = '';
         while( $code =~ /($begin_pat|$par_pat|$cir_par_pat)($token_pat*?)(?=($par_pat|$cir_par_pat|$end_pat))/g ) {
             my $fragment = $2;
-            $out .= com($depth, $fragment, $1);
+            $out .= com($fragment, $1);
         }
         $out;
     }ge;
 }
 
 FILTER {
-    replace_code(0, $_);
+    replace_code($_);
     if( $opt{verbose} ) {
         my $verbose_code = $_;
         my $n = $line_shift;
